@@ -1,0 +1,12 @@
+.employee-card {
+    margin: 10px;
+}
+
+.card-header {
+    background-color: lightskyblue;
+}
+
+.team-heading {
+    color: azure;
+    background-color: steelblue;
+}

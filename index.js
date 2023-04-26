@@ -11,6 +11,7 @@ const fs = require("fs");
 // const readFilePromise = util.promisify(fs.readFile);
 // const writeFilePromise = util.promisify(fs.writeFile);
 
+let teamNameStr = "";
 const teamArr = [];
 
 addManager();
@@ -24,12 +25,7 @@ function addManager () {
             type: "input",
             name: "teamName",
             message: "Team Name: ",
-            validate:  input => { 
-                const checkExp = new RegExp(/^[a-zA-Z0-9]+$/);
-                if (checkExp.test(input)) { return true; 
-                } else { return "Must be alphanumeric"; 
-                };
-            }
+            validate: input => (input !== "")
         },
         {
             type: "input",
@@ -62,29 +58,24 @@ function addManager () {
         {
             type: "input",
             name: "officeNumber",
-            message: "Office phone number: ",
-            validate: input => {
-                const checkExp = new RegExp(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im);
-                // Citation: https://stackoverflow.com/questions/4338267/validate-phone-number-with-javascript
-                if (input === "" || checkExp.test(input)) { return true;
-                } else { return "Must be a phone number. ex: 123-456-7890";
-                };
-            }
+            message: "Office phone number: "
         }
     ]).then(objManager => {
-        teamArr.push(new Manager(objManager))
+        teamNameStr = objManager.teamName;
+        const {name, id, email, officeNumber} = objManager
+        teamArr.push(new Manager(name, id, email, officeNumber))
         askNext();
     });
 };
 
 // Ask user which action to do next
 function askNext () {
-    const actionArr = ["Add an Engineer", "Add an Intern", "Edit Team Name", "Edit Manager", "Remove Employee", "Build the team page"];
+    const actionArr = ["Add an Engineer", "Add an Intern", "Preview Team Roster", "Edit Team Name", "Edit Manager", "Remove Employee", "Finish: Build the team page"];
     inquirer.prompt({
         type: "list",
         name: "action",
         choices: actionArr,
-        message: "Continue updating the team or finish and building the team page: "
+        message: "Continue updating the team or finish by building the team page: "
     }).then(objNext => {
         switch (objNext.action) {
             case actionArr[0]:
@@ -94,12 +85,16 @@ function askNext () {
                 addIntern();
                 break;
             case actionArr[2]:
-                editTeamName();
+                console.log(teamArr);
+                askNext();
                 break;
             case actionArr[3]:
-                editManager();
+                editTeamName();
                 break;
             case actionArr[4]:
+                editManager();
+                break;
+            case actionArr[5]:
                 removeEmployee();
                 break;
             default:
@@ -151,7 +146,8 @@ function addEngineer () {
             }
         }
     ]).then(objEngineer => {
-        teamArr.push(new Engineer(objEngineer));
+        const {name, id, email, github} = objEngineer
+        teamArr.push(new Engineer(name, id, email, github));
         askNext();
     });
 };
@@ -192,7 +188,8 @@ function addIntern () {
             message: "School: "
         }
     ]).then(objIntern => {
-        teamArr.push(new Intern(objIntern));
+        const {name, id, email, school} = objIntern
+        teamArr.push(new Intern(name, id, email, school));
         askNext();
     });
 };
@@ -202,14 +199,9 @@ function editTeamName () {
         type: "input",
         name: "teamName",
         message: "Team Name: ",
-        validate:  input => { 
-            const checkExp = new RegExp(/^[a-zA-Z0-9]+$/);
-            if (checkExp.test(input)) { return true; 
-            } else { return "Must be alphanumeric"; 
-            };
-        }
+        validate: input => (input !== "")
     }).then(objTeam => {
-        teamArr[0].teamName = objTeam.teamName;
+        teamNameStr = objTeam.teamName;
         askNext();
     });
 };
@@ -252,19 +244,17 @@ function editManager () {
             name: "officeNumber",
             message: "Office phone number: ",
             default: teamArr[0].officeNumber,
-            validate: input => {
-                const checkExp = new RegExp(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im);
-                // Citation: https://stackoverflow.com/questions/4338267/validate-phone-number-with-javascript
-                if (input === "" || checkExp.test(input)) { return true;
-                } else { return "Must be a phone number. ex: 123-456-7890";
-                };
-            }
         }
     ]).then(objManager => {
-        teamArr[0].name = objManager.name;
-        teamArr[0].id = objManager.id;
-        teamArr[0].email = objManager.email;
-        teamArr[0].officeNumber = objManager.officeNumber;
+        const {name, id, email, officeNumber} = objManager
+        for (const key in objManager) {
+            teamArr[0][key] = objManager.key;
+            // if (Object.hasOwnProperty.call(object, key)) {
+            //     const element = object[key];
+                
+            // }
+        }
+        teamArr.splice(0, 1, new Manager(name, id, email, officeNumber))
         askNext();
     });
 };
@@ -287,10 +277,10 @@ function removeEmployee () {
 }
 
 function createFile() {
-    const teamFile = `./dist/${teamArr[0].teamName}.html`;
+    const teamFile = `./dist/${encodeURIComponent(teamNameStr).toLowerCase()}.html`;
     fs.readFile(teamFile, (err, data) => {
         if (err) {
-            fs.writeFile(teamFile, generateHTML(teamArr), err => {
+            fs.writeFile(teamFile, generateHTML(teamArr, teamNameStr), err => {
                 err ? console.log(err) : console.log(`Successfully created ${teamFile}`);
             })
         } else {
@@ -301,9 +291,9 @@ function createFile() {
                 choices: ["Edit Team Name", `Overwrite ${teamFile}`]
             }).then(objResponse => {
                 if (objResponse.overwrite === "Edit Team Name") { 
-                    editTeamName(); 
+                    return editTeamName(); 
                 } else {
-                    fs.writeFile(teamFile, generateHTML(teamArr), err => {
+                    fs.writeFile(teamFile, generateHTML(teamArr, teamNameStr), err => {
                         err ? console.log(err) : console.log(`Successfully created ${teamFile}`);
                     });
                 };
