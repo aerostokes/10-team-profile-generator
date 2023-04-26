@@ -5,20 +5,18 @@ const Manager = require("./lib/Manager");
 const generateHTML = require("./util/generateHtml")
 
 const inquirer = require("inquirer");
-
 const fs = require("fs");
-// const util = require("util");
-// const readFilePromise = util.promisify(fs.readFile);
-// const writeFilePromise = util.promisify(fs.writeFile);
 
 let teamNameStr = "";
 const teamArr = [];
 
+// On application start:
 addManager();
+
 
 // ----- Callback functions -----
 
-// Collect manager's info from user
+// Collect team name and manager's info from user and add it to teamArr
 function addManager () {
     inquirer.prompt([
         {
@@ -30,13 +28,13 @@ function addManager () {
         {
             type: "input",
             name: "name",
-            message: "Manager's name: ",
+            message: "Manager's Name: ",
             validate: input => (input !== "")
         },
         {
             type: "input",
             name: "id",
-            message: "Employee ID: ",
+            message: "Manager's Employee ID: ",
             validate:  input => { 
                 const checkExp = new RegExp(/^[a-zA-Z0-9]+$/);
                 if (checkExp.test(input)) { return true; 
@@ -47,7 +45,7 @@ function addManager () {
         {
             type: "input",
             name: "email",
-            message: "Email address: ",
+            message: "Manager's Email: ",
             validate: input => {
                 const checkExp = new RegExp(/@{1}/);
                 if (input === "" || checkExp.test(input)) { return true;
@@ -58,7 +56,7 @@ function addManager () {
         {
             type: "input",
             name: "officeNumber",
-            message: "Office phone number: "
+            message: "Manager's Office Number: "
         }
     ]).then(objManager => {
         teamNameStr = objManager.teamName;
@@ -70,12 +68,12 @@ function addManager () {
 
 // Ask user which action to do next
 function askNext () {
-    const actionArr = ["Add an Engineer", "Add an Intern", "Preview Team Roster", "Edit Team Name", "Edit Manager", "Remove Employee", "Finish: Build the team page"];
+    const actionArr = ["Add an Engineer", "Add an Intern", "Preview Team Roster", "Edit Team Name", "Edit Manager", "Remove Employee", "Finish: Build the Team Page"];
     inquirer.prompt({
         type: "list",
         name: "action",
         choices: actionArr,
-        message: "Continue updating the team or finish by building the team page: "
+        message: "Select Next Action: "
     }).then(objNext => {
         switch (objNext.action) {
             case actionArr[0]:
@@ -104,12 +102,14 @@ function askNext () {
     });
 };
 
+
+// Collect engineer's info from user and add it to teamArr
 function addEngineer () {
     inquirer.prompt([
         {
             type: "input",
             name: "name",
-            message: "Engineer's name: ",
+            message: "Engineer's Name: ",
             validate: input => (input !== "")
         },
         {
@@ -126,7 +126,7 @@ function addEngineer () {
         {
             type: "input",
             name: "email",
-            message: "Email address: ",
+            message: "Email: ",
             validate: input => {
                 const checkExp = new RegExp(/@{1}/);
                 if (input === "" || checkExp.test(input)) { return true;
@@ -152,12 +152,13 @@ function addEngineer () {
     });
 };
 
+// Collect intern's info from user and add it to teamArr
 function addIntern () {
     inquirer.prompt([
         {
             type: "input",
             name: "name",
-            message: "Intern's name: ",
+            message: "Intern's Name: ",
             validate: input => (input !== "")
         },
         {
@@ -174,7 +175,7 @@ function addIntern () {
         {
             type: "input",
             name: "email",
-            message: "Email address: ",
+            message: "Email: ",
             validate: input => {
                 const checkExp = new RegExp(/@{1}/);
                 if (input === "" || checkExp.test(input)) { return true;
@@ -194,6 +195,7 @@ function addIntern () {
     });
 };
 
+// Collect an updated team name from user
 function editTeamName () {
     inquirer.prompt({
         type: "input",
@@ -206,12 +208,13 @@ function editTeamName () {
     });
 };
 
+// Collect updated manager's info from user and edit the manager's object in teamArr
 function editManager () {
     inquirer.prompt([
         {
             type: "input",
             name: "name",
-            message: "Manager's name: ",
+            message: "Manager's Name: ",
             default: teamArr[0].name,
             validate: input => (input !== "")
         },
@@ -230,7 +233,7 @@ function editManager () {
         {
             type: "input",
             name: "email",
-            message: "Email address: ",
+            message: "Email: ",
             default: teamArr[0].email,
             validate: input => {
                 const checkExp = new RegExp(/@{1}/);
@@ -242,23 +245,18 @@ function editManager () {
         {
             type: "input",
             name: "officeNumber",
-            message: "Office phone number: ",
+            message: "Office Number: ",
             default: teamArr[0].officeNumber,
         }
     ]).then(objManager => {
-        const {name, id, email, officeNumber} = objManager
         for (const key in objManager) {
-            teamArr[0][key] = objManager.key;
-            // if (Object.hasOwnProperty.call(object, key)) {
-            //     const element = object[key];
-                
-            // }
+            teamArr[0][key] = objManager[key];
         }
-        teamArr.splice(0, 1, new Manager(name, id, email, officeNumber))
         askNext();
     });
 };
 
+// Show user list of current (non-manager) employee and delete the user's selection (or do nothing if user selects "Cancel")
 function removeEmployee () {
     const choiceArr = ["Cancel"].concat(teamArr.slice(1).map(employee => {
         return `${employee.name} (${employee.getRole()})`;
@@ -276,6 +274,7 @@ function removeEmployee () {
     })
 }
 
+// Call generateHTML and write to local folder "/dist". If the file already exists, ask user whether to overwrite the existing file or to change the team name to create a unique file name.
 function createFile() {
     const teamFile = `./dist/${encodeURIComponent(teamNameStr).toLowerCase()}.html`;
     fs.readFile(teamFile, (err, data) => {
@@ -287,7 +286,7 @@ function createFile() {
             inquirer.prompt({
                 type: "list",
                 name:"overwrite",
-                message: `${teamFile} already exists. Would you like to change to a unique Team Name or overwrite the existing file?`,
+                message: `${teamFile} already exists. Would you like to change to a unique team name or overwrite the existing file?`,
                 choices: ["Edit Team Name", `Overwrite ${teamFile}`]
             }).then(objResponse => {
                 if (objResponse.overwrite === "Edit Team Name") { 
